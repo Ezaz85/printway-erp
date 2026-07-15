@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Printway Packaging — ERP</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<style>
+  :root {
+    --bg: #09090b;
+    --panel: #18181b;
+    --panel-2: #1f1f23;
+    --border: rgba(255,255,255,0.08);
+    --text: #ffffff;
+    --muted: #a1a1aa;
+    --accent: #dc2626;
+    --accent-2: #991b1b;
+    --danger: #ef4444;
+    --ok: #34d399;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* ---------- Login screen ---------- */
+  #loginScreen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-card {
+    width: 100%;
+    max-width: 360px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 28px;
+  }
+  .login-card h1 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+  .login-card p.sub {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-bottom: 24px;
+  }
+  .login-error {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.3);
+    color: #fca5a5;
+    font-size: 12.5px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: none;
+  }
+
+  /* ---------- App shell ---------- */
+  #appScreen { display: none; padding: 16px; }
+  @media (min-width: 768px) { #appScreen { padding: 24px; } }
+
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .brand h1 { font-size: 19px; font-weight: 800; letter-spacing: -0.4px; }
+  .brand span.tag {
+    display: block;
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .who {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .who .email {
+    font-size: 11.5px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: var(--text);
+    font-weight: 600;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11.5px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+  }
+  .btn-logout:hover { border-color: var(--danger); color: var(--danger); }
+
+  .sector-tabs {
+    display: flex; gap: 8px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.03);
+    padding: 6px; border-radius: 8px; border: 1px solid var(--border);
+  }
+  .sector-tab {
+    flex: 1; background: transparent; border: none; color: var(--muted);
+    font-size: 12px; font-weight: 700; padding: 10px; border-radius: 6px;
+    cursor: pointer; text-transform: uppercase; transition: all .15s; font-family: inherit;
+  }
+  .sector-tab.active { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(220,38,38,.25); }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 20px; }
+  @media (min-width: 1024px) { .grid { grid-template-columns: 3.4fr 8.6fr; align-items: start; } }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .card + .card { margin-top: 20px; }
+  .card h3 {
+    font-size: 12.5px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent); margin-bottom: 16px; border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .field { margin-bottom: 13px; }
+  .field label {
+    display: block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px; letter-spacing: .3px;
+  }
+  .field input, .field select {
+    width: 100%; background: rgba(9,9,11,0.6); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 12px; color: white; font-size: 13.5px; font-family: inherit;
+  }
+  .field select option { background: #18181b; color: white; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+  .btn-primary {
+    width: 100%; background: linear-gradient(to right, var(--accent), var(--accent-2));
+    border: none; border-radius: 6px; padding: 11px 20px; color: white; font-size: 13px;
+    font-weight: 700; cursor: pointer; margin-top: 6px; font-family: inherit;
+  }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+  .btn-ghost {
+    width: 100%; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 9px 20px; color: var(--muted); font-size: 12.5px;
+    font-weight: 700; cursor: pointer; margin-top: 8px; font-family: inherit;
+  }
+
+  .statement {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,.5);
+  }
+  @media (min-width: 768px) { .statement { padding: 32px; } }
+  .statement-head { text-align: center; border-bottom: 2px solid #27272a; padding-bottom: 18px; margin-bottom: 20px; }
+  .statement-head h2 { font-size: 20px; font-weight: 800; text-transform: uppercase; }
+  @media (min-width: 768px) { .statement-head h2 { font-size: 24px; } }
+  .statement-head p { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+
+  .meta-box {
+    display: grid; grid-template-columns: 1fr; gap: 14px;
+    margin-bottom: 20px; background: rgba(9,9,11,0.5); border: 1px solid var(--border);
+    padding: 14px; border-radius: 8px; font-size: 12.5px;
+  }
+  @media (min-width: 640px) { .meta-box { grid-template-columns: repeat(2,1fr); } }
+  .meta-box p { margin-bottom: 6px; }
+  .meta-box .right { text-align: left; }
+  @media (min-width: 640px) { .meta-box .right { text-align: right; } }
+
+  .table-wrap { width: 100%; overflow-x: auto; margin-top: 14px; }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; min-width: 760px; }
+  th {
+    background: #27272a; color: #fff; padding: 10px 12px; font-weight: 700;
+    text-transform: uppercase; font-size: 9.5px; border: 1px solid #3f3f46; white-space: nowrap;
+  }
+  td { padding: 10px 12px; border: 1px solid #3f3f46; color: #e4e4e7; vertical-align: middle; white-space: nowrap; }
+  .mono { font-family: "Courier New", monospace; font-size: 12.5px; font-weight: 700; }
+
+  .filter-bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    margin-bottom: 14px; background: rgba(24,24,27,.6); border: 1px solid var(--border);
+    padding: 10px 14px; border-radius: 8px; flex-wrap: wrap;
+  }
+  .filter-bar .label { font-size: 11.5px; font-weight: 700; text-transform: uppercase; }
+  .btn-group { display: flex; gap: 8px; }
+  .btn-chip {
+    background: #fff; border: none; color: #000; font-size: 11.5px; font-weight: 700;
+    padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: inherit;
+  }
+  .btn-chip.solid { background: var(--accent); color: #fff; }
+
+  .due { color: var(--danger); font-weight: 700; }
+  .advance { color: #fff; font-weight: 700; background: rgba(255,255,255,.1); padding: 2px 6px; border-radius: 4px; }
+  .row-actions { display: flex; gap: 6px; }
+  .row-btn {
+    border: none; padding: 5px 9px; border-radius: 4px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; cursor: pointer; color: white; font-family: inherit;
+  }
+  .row-btn.edit { background: var(--amber); }
+  .row-btn.del { background: var(--danger); }
+
+  .client-list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 6px; font-size: 12.5px; background: rgba(9,9,11,0.4);
+  }
+  .client-list-item.active { border-color: var(--accent); background: rgba(220,38,38,0.08); }
+  .client-list-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .client-list-item .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .client-list-item button {
+    border: none; padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; cursor: pointer; color: white; font-family: inherit;
+  }
+  .client-list-item .pick-btn { background: rgba(255,255,255,0.1); color: var(--muted); }
+  .client-list-item .del-btn { background: var(--danger); }
+  .client-list-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--muted); letter-spacing: .3px; margin-bottom: 8px; }
+
+  .empty-note { color: var(--muted); font-size: 13px; padding: 20px 4px; text-align: center; }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--panel-2); border: 1px solid var(--border); color: #fff;
+    padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 999;
+    box-shadow: 0 10px 30px rgba(0,0,0,.5); display: none; max-width: 90vw;
+  }
+  .toast.err { border-color: rgba(239,68,68,.4); color: #fca5a5; }
+
+  @media print {
+    body { background: #fff !important; color: #000 !important; }
+    header.top, .sector-tabs, .card, .filter-bar, .row-actions, th:last-child, td:last-child { display: none !important; }
+    .grid { grid-template-columns: 1fr !important; }
+    .statement { border: none !important; box-shadow: none !important; padding: 0 !important; }
+    .statement-head h2 { color: #000 !important; }
+    .statement-head p, .meta-box p { color: #334155 !important; }
+    .meta-box { background: #f8fafc !important; border: 1px solid #cbd5e1 !important; color: #000 !important; }
+    th { background: #f1f5f9 !important; color: #000 !important; border: 1px solid #94a3b8 !important; }
+    td { color: #000 !important; border: 1px solid #94a3b8 !important; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ LOGIN SCREEN ============ -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <h1>Printway Packaging</h1>
+      <p class="sub">Staff sign-in · ERP System</p>
+      <div class="login-error" id="loginError"></div>
+      <form id="loginForm">
+        <div class="field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" required placeholder="you@printway.com" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn-primary" id="loginBtn">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ============ MAIN APP ============ -->
+  <div id="appScreen">
+    <header class="top">
+      <div class="brand">
+        <h1>PRINTWAY ERP</h1>
+        <span class="tag">Foil Printing &amp; Flexible Packaging</span>
+      </div>
+      <div class="who">
+        <span class="email" id="whoEmail">—</span>
+        <button class="btn-logout" id="btnLogout">Log out</button>
+      </div>
+    </header>
+
+    <div class="sector-tabs">
+      <button class="sector-tab active" id="tabPurchase">📦 Purchase (Suppliers)</button>
+      <button class="sector-tab" id="tabSales">💰 Sales (Buyers)</button>
+    </div>
+
+    <main class="grid">
+      <div>
+        <div class="card">
+          <h3 id="clientPanelHeading">Add New Supplier</h3>
+          <form id="clientForm">
+            <div class="field"><label>Company / Client Name</label><input type="text" id="inCompany" required></div>
+            <div class="field"><label>Proprietor Name</label><input type="text" id="inProprietor" required></div>
+            <div class="field"><label>Mobile Number</label><input type="text" id="inMobile" required></div>
+            <div class="field"><label>Address</label><input type="text" id="inLocation" required></div>
+            <div class="field"><label>Opening Balance (TK)</label><input type="number" step="0.01" id="inOpeningBalance" value="0.00"></div>
+            <button type="submit" class="btn-primary">Save Profile</button>
+          </form>
+          <div id="clientListWrap" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="card">
+          <h3 id="formPanelHeading">Add Ledger Entry</h3>
+          <form id="ledgerForm">
+            <input type="hidden" id="editEntryId" value="-1">
+            <div class="field">
+              <label>Client</label>
+              <select id="clientSelector"></select>
+            </div>
+            <div class="field"><label>Date</label><input type="date" id="inDate" required></div>
+            <div class="field"><label>Challan No</label><input type="text" id="inChallanNo" placeholder="e.g. 004"></div>
+            <div class="field"><label>Description</label><input type="text" id="inDescription" required placeholder="e.g. Foil roll delivery"></div>
+            <div class="field"><label>Bank / Cash</label><input type="text" id="inBankCash" placeholder="e.g. Cash / DBBL"></div>
+            <div class="field"><label>Quantity (KG)</label><input type="number" step="0.01" id="inQuantity"></div>
+            <div class="field"><label>Unit Rate</label><input type="number" step="0.01" id="inSalesPrice"></div>
+            <div class="field"><label>Paid Amount (TK)</label><input type="number" step="0.01" id="inPaid"></div>
+            <button type="submit" class="btn-primary" id="ledgerSubmitBtn">Add Entry</button>
+            <button type="button" class="btn-ghost" id="cancelEditBtn" style="display:none;">Cancel Edit</button>
+          </form>
+        </div>
+      </div>
+
+      <div>
+        <div class="filter-bar">
+          <div class="label" id="tableLabel">Purchase Ledger</div>
+          <div class="btn-group">
+            <button class="btn-chip" id="btnPdf">💾 Save PDF</button>
+            <button class="btn-chip solid" id="btnPrint">🖨 Print</button>
+          </div>
+        </div>
+
+        <div class="statement">
+          <div class="statement-head">
+            <h2 id="lblCompany">—</h2>
+            <p id="lblSubHeading">Purchase Statement</p>
+          </div>
+          <div class="meta-box">
+            <div>
+              <p>Proprietor: <span id="lblProprietor">—</span></p>
+              <p>Mobile: <span id="lblMobile">—</span></p>
+              <p>Address: <span id="lblLocation">—</span></p>
+            </div>
+            <div class="right">
+              <p>Opening Balance: <span id="lblOpeningBalance">0.00 TK</span></p>
+              <p>Current Balance: <span id="lblRunningDue">0.00 TK</span></p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>SL</th><th>Date</th><th>Challan</th><th>Description</th><th>Bank/Cash</th>
+                  <th>Qty (KG)</th><th>Rate</th><th>Total</th><th>Paid</th><th>Balance</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ledgerBody"></tbody>
+            </table>
+          </div>
+          <p class="empty-note" id="emptyNote" style="display:none;">No clients yet — add one on the left to get started.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.js';
+
+// Safe storage wrapper: falls back to in-memory if localStorage is blocked
+// (e.g. inside a sandboxed preview), so login doesn't crash either way.
+const memoryStore = {};
+const safeStorage = {
+  getItem: (k) => { try { return window.localStorage.getItem(k); } catch { return memoryStore[k] ?? null; } },
+  setItem: (k, v) => { try { window.localStorage.setItem(k, v); } catch { memoryStore[k] = v; } },
+  removeItem: (k) => { try { window.localStorage.removeItem(k); } catch { delete memoryStore[k]; } },
+};
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, storage: safeStorage }
+});
+
+let currentSector = 'purchase';
+let clients = [];
+let activeIndex = 0;
+let entries = [];
+
+function showToast(msg, isErr = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3200);
+}
+
+// ---------- AUTH ----------
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const errBox = document.getElementById('loginError');
+  errBox.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if (error) {
+    errBox.textContent = error.message;
+    errBox.style.display = 'block';
+    return;
+  }
+  await enterApp();
+});
+
+document.getElementById('btnLogout').addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+});
+
+async function enterApp() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return;
+  document.getElementById('whoEmail').textContent = session.user.email;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('inDate').value = new Date().toISOString().split('T')[0];
+  await syncClients();
+}
+
+// On load, check if already logged in
+supabase.auth.getSession().then(({ data: { session } }) => {
+  if (session) enterApp();
+});
+
+// ---------- SECTOR TABS ----------
+async function setSector(sector) {
+  currentSector = sector;
+  activeIndex = 0;
+  document.getElementById('tabPurchase').classList.toggle('active', sector === 'purchase');
+  document.getElementById('tabSales').classList.toggle('active', sector === 'sales');
+  document.getElementById('clientPanelHeading').textContent = sector === 'purchase' ? 'Add New Supplier' : 'Add New Buyer';
+  document.getElementById('tableLabel').textContent = sector === 'purchase' ? 'Purchase Ledger' : 'Sales Ledger';
+  document.getElementById('lblSubHeading').textContent = sector === 'purchase' ? 'Purchase Statement' : 'Sales Statement';
+  resetLedgerForm();
+  await syncClients();
+}
+document.getElementById('tabPurchase').addEventListener('click', () => setSector('purchase'));
+document.getElementById('tabSales').addEventListener('click', () => setSector('sales'));
+
+// ---------- CLIENT SYNC ----------
+async function syncClients() {
+  const { data, error } = await supabase
+    .from('clients').select('*')
+    .eq('sector_type', currentSector)
+    .order('company_name', { ascending: true });
+  if (error) { showToast('Load failed: ' + error.message, true); return; }
+  clients = data || [];
+  const sel = document.getElementById('clientSelector');
+  sel.innerHTML = '';
+  const emptyNote = document.getElementById('emptyNote');
+
+  if (clients.length === 0) {
+    document.getElementById('lblCompany').textContent = `No ${currentSector} profiles yet`;
+    document.getElementById('lblProprietor').textContent = '—';
+    document.getElementById('lblMobile').textContent = '—';
+    document.getElementById('lblLocation').textContent = '—';
+    document.getElementById('lblOpeningBalance').textContent = '0.00 TK';
+    document.getElementById('lblRunningDue').textContent = '0.00 TK';
+    document.getElementById('ledgerBody').innerHTML = '';
+    emptyNote.style.display = 'block';
+    document.getElementById('clientListWrap').innerHTML = '';
+    return;
+  }
+  emptyNote.style.display = 'none';
+
+  clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.client_id;
+    opt.textContent = c.company_name;
+    sel.appendChild(opt);
+  });
+  if (activeIndex >= clients.length || activeIndex < 0) activeIndex = 0;
+  sel.value = clients[activeIndex].client_id;
+  renderClientList();
+  await syncEntries();
+}
+
+function renderClientList() {
+  const wrap = document.getElementById('clientListWrap');
+  if (!clients.length) { wrap.innerHTML = ''; return; }
+  const active = clients[activeIndex];
+  let html = `<div class="client-list-title">Existing ${currentSector} clients (${clients.length})</div>`;
+  clients.forEach(c => {
+    const isActive = active && c.client_id === active.client_id;
+    html += `
+      <div class="client-list-item ${isActive ? 'active' : ''}">
+        <span class="name">${c.company_name}</span>
+        <span class="actions">
+          <button class="pick-btn" data-id="${c.client_id}">View</button>
+          <button class="del-btn" data-id="${c.client_id}" data-name="${c.company_name.replace(/"/g, '&quot;')}">Delete</button>
+        </span>
+      </div>`;
+  });
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.pick-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = clients.findIndex(c => String(c.client_id) === btn.dataset.id);
+      if (idx !== -1) activeIndex = idx;
+      document.getElementById('clientSelector').value = btn.dataset.id;
+      resetLedgerForm();
+      renderClientList();
+      await syncEntries();
+    });
+  });
+  wrap.querySelectorAll('.del-btn').forEach(btn => {
+    btn.addEventListener('click', () => deleteClient(btn.dataset.id, btn.dataset.name));
+  });
+}
+
+async function deleteClient(clientId, name) {
+  const ok = confirm(`Delete "${name}"? This will also delete ALL of its ledger entries. This cannot be undone.`);
+  if (!ok) return;
+  const { error } = await supabase.from('clients').delete().eq('client_id', clientId);
+  if (error) { showToast('Delete failed: ' + error.message, true); return; }
+  showToast('Client deleted.');
+  activeIndex = 0;
+  await syncClients();
+}
+
+document.getElementById('clientSelector').addEventListener('change', async (e) => {
+  const idx = clients.findIndex(c => String(c.client_id) === String(e.target.value));
+  if (idx !== -1) activeIndex = idx;
+  resetLedgerForm();
+  await syncEntries();
+});
+
+// ---------- CLIENT FORM ----------
+document.getElementById('clientForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    company_name: document.getElementById('inCompany').value.trim(),
+    proprietor_name: document.getElementById('inProprietor').value.trim(),
+    mobile_number: document.getElementById('inMobile').value.trim(),
+    location_address: document.getElementById('inLocation').value.trim(),
+    opening_balance: parseFloat(document.getElementById('inOpeningBalance').value) || 0,
+    sector_type: currentSector
+  };
+  const { error } = await supabase.from('clients').insert([payload]);
+  if (error) { showToast('Save failed: ' + error.message, true); return; }
+  showToast('Profile saved.');
+  e.target.reset();
+  document.getElementById('inOpeningBalance').value = '0.00';
+  activeIndex = 0;
+  await syncClients();
+});
+
+// ---------- LEDGER SYNC ----------
+async function syncEntries() {
+  const client = clients[activeIndex];
+  if (!client) return;
+  document.getElementById('lblCompany').textContent = client.company_name;
+  document.getElementById('lblProprietor').textContent = client.proprietor_name || '—';
+  document.getElementById('lblMobile').textContent = client.mobile_number || '—';
+  document.getElementById('lblLocation').textContent = client.location_address || '—';
+  document.getElementById('lblOpeningBalance').textContent = Number(client.opening_balance).toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' TK';
+
+  const { data, error } = await supabase
+    .from('ledger_entries').select('*')
+    .eq('client_id', client.client_id)
+    .order('entry_date', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (error) { showToast('Load failed: ' + error.message, true); return; }
+  entries = data || [];
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('ledgerBody');
+  tbody.innerHTML = '';
+  const client = clients[activeIndex];
+  if (!client) return;
+  let running = parseFloat(client.opening_balance) || 0;
+
+  entries.forEach((row, i) => {
+    const qty = parseFloat(row.quantity) || 0;
+    const price = parseFloat(row.sales_price) || 0;
+    const cost = parseFloat(row.total_price) || 0;
+    const paid = parseFloat(row.paid_amount) || 0;
+    running = running + cost - paid;
+    const dateStr = row.entry_date ? new Date(row.entry_date).toLocaleDateString('en-GB') : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="mono">${i + 1}</td>
+      <td class="mono">${dateStr}</td>
+      <td class="mono">${row.challan_no || '—'}</td>
+      <td>${row.description}</td>
+      <td>${row.bank_cash || '—'}</td>
+      <td class="mono">${qty.toFixed(2)}</td>
+      <td class="mono">${price.toFixed(2)}</td>
+      <td class="mono">${cost.toFixed(2)}</td>
+      <td class="mono">${paid.toFixed(2)}</td>
+      <td class="mono ${running < 0 ? 'advance' : 'due'}">${running.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-btn edit" data-id="${row.entry_id}">Edit</button>
+          <button class="row-btn del" data-id="${row.entry_id}">Del</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  tbody.querySelectorAll('.row-btn.edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = entries.find(r => String(r.entry_id) === btn.dataset.id);
+      if (row) startEdit(row);
+    });
+  });
+  tbody.querySelectorAll('.row-btn.del').forEach(btn => {
+    btn.addEventListener('click', () => deleteEntry(btn.dataset.id));
+  });
+
+  const lbl = document.getElementById('lblRunningDue');
+  lbl.textContent = running.toLocaleString('en-US', { minimumFractionDigits: 2 }) + ' TK' + (running < 0 ? ' (Advance)' : ' (Due)');
+  lbl.className = running < 0 ? 'advance' : 'due';
+}
+
+// ---------- LEDGER FORM ----------
+document.getElementById('ledgerForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const clientId = document.getElementById('clientSelector').value;
+  if (!clientId) { showToast('Add a client profile first.', true); return; }
+
+  let challan = document.getElementById('inChallanNo').value.trim();
+  if (challan) challan = challan.toUpperCase().startsWith('CH-') ? challan : 'CH-' + challan;
+
+  const qty = parseFloat(document.getElementById('inQuantity').value) || 0;
+  const price = parseFloat(document.getElementById('inSalesPrice').value) || 0;
+  const paid = parseFloat(document.getElementById('inPaid').value) || 0;
+
+  const payload = {
+    client_id: parseInt(clientId),
+    entry_date: document.getElementById('inDate').value,
+    challan_no: challan || '—',
+    description: document.getElementById('inDescription').value.trim(),
+    bank_cash: document.getElementById('inBankCash').value.trim(),
+    quantity: qty,
+    sales_price: price,
+    total_price: qty * price,
+    paid_amount: paid
+  };
+
+  const editId = document.getElementById('editEntryId').value;
+  let error;
+  if (editId === '-1') {
+    ({ error } = await supabase.from('ledger_entries').insert([payload]));
+  } else {
+    ({ error } = await supabase.from('ledger_entries').update(payload).eq('entry_id', editId));
+  }
+  if (error) { showToast('Save failed: ' + error.message, true); return; }
+  showToast(editId === '-1' ? 'Entry added.' : 'Entry updated.');
+  resetLedgerForm();
+  await syncEntries();
+});
+
+document.getElementById('cancelEditBtn').addEventListener('click', resetLedgerForm);
+
+function startEdit(row) {
+  document.getElementById('editEntryId').value = row.entry_id;
+  document.getElementById('inDate').value = row.entry_date;
+  document.getElementById('inChallanNo').value = (row.challan_no || '').replace('CH-', '');
+  document.getElementById('inDescription').value = row.description;
+  document.getElementById('inBankCash').value = row.bank_cash || '';
+  document.getElementById('inQuantity').value = row.quantity || '';
+  document.getElementById('inSalesPrice').value = row.sales_price || '';
+  document.getElementById('inPaid').value = row.paid_amount || '';
+  document.getElementById('formPanelHeading').textContent = 'Editing Entry';
+  document.getElementById('ledgerSubmitBtn').textContent = 'Save Changes';
+  document.getElementById('cancelEditBtn').style.display = 'block';
+}
+
+function resetLedgerForm() {
+  document.getElementById('editEntryId').value = '-1';
+  document.getElementById('ledgerForm').reset();
+  document.getElementById('inDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('formPanelHeading').textContent = 'Add Ledger Entry';
+  document.getElementById('ledgerSubmitBtn').textContent = 'Add Entry';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+async function deleteEntry(entryId) {
+  if (!confirm('Delete this entry?')) return;
+  const { error } = await supabase.from('ledger_entries').delete().eq('entry_id', entryId);
+  if (error) { showToast('Delete failed: ' + error.message, true); return; }
+  showToast('Entry deleted.');
+  resetLedgerForm();
+  await syncEntries();
+}
+
+// ---------- PRINT / PDF ----------
+document.getElementById('btnPrint').addEventListener('click', () => window.print());
+document.getElementById('btnPdf').addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const client = clients[activeIndex];
+  if (!client) { showToast('No client selected.', true); return; }
+
+  pdf.setFillColor(242, 244, 247);
+  pdf.rect(0, 0, 210, 42, 'F');
+  pdf.setTextColor(15, 23, 42);
+  pdf.setFont('Helvetica', 'bold'); pdf.setFontSize(22);
+  pdf.text('PRINTWAY PACKAGING', 105, 18, { align: 'center' });
+  pdf.setFont('Helvetica', 'normal'); pdf.setFontSize(10);
+  pdf.setTextColor(100, 116, 139);
+  pdf.text(`${currentSector.toUpperCase()} Statement`, 105, 26, { align: 'center' });
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(12, 48, 198, 48);
+  pdf.setTextColor(51, 65, 85); pdf.setFontSize(10);
+  pdf.text(`Profile: ${client.company_name}`, 14, 58);
+  pdf.text(`Proprietor: ${client.proprietor_name || '—'}`, 14, 65);
+  pdf.text(`Mobile: ${client.mobile_number || '—'}`, 14, 72);
+  pdf.text(`Address: ${client.location_address || '—'}`, 14, 79);
+
+  let running = parseFloat(client.opening_balance) || 0;
+  const rows = entries.map((row, i) => {
+    const qty = parseFloat(row.quantity) || 0;
+    const price = parseFloat(row.sales_price) || 0;
+    const cost = parseFloat(row.total_price) || 0;
+    const paid = parseFloat(row.paid_amount) || 0;
+    running = running + cost - paid;
+    return [
+      i + 1,
+      row.entry_date ? new Date(row.entry_date).toLocaleDateString('en-GB') : '—',
+      row.challan_no || '—', row.description, row.bank_cash || '—',
+      qty.toFixed(2), price.toFixed(2), cost.toFixed(2), paid.toFixed(2), running.toFixed(2)
+    ];
+  });
+
+  pdf.text(`Opening Balance: ${Number(client.opening_balance).toLocaleString('en-US', { minimumFractionDigits: 2 })} TK`, 122, 58);
+  pdf.setFont('Helvetica', 'bold'); pdf.setTextColor(185, 28, 28);
+  pdf.text(`Current Balance: ${running.toLocaleString('en-US', { minimumFractionDigits: 2 })} TK`, 122, 67);
+
+  pdf.autoTable({
+    startY: 88, margin: { left: 14, right: 14 },
+    head: [['SL', 'Date', 'Challan', 'Description', 'Bank/Cash', 'Qty(KG)', 'Rate', 'Total', 'Paid', 'Balance']],
+    body: rows, theme: 'grid',
+    headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'center' },
+    bodyStyles: { fontSize: 8, textColor: [51, 65, 85] },
+    styles: { font: 'Helvetica', cellPadding: 2, overflow: 'linebreak' },
+    columnStyles: { 3: { halign: 'left' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } }
+  });
+
+  const finalY = pdf.lastAutoTable.finalY + 25;
+  pdf.setDrawColor(150); pdf.line(16, finalY, 66, finalY); pdf.line(144, finalY, 194, finalY);
+  pdf.setFont('Helvetica', 'normal'); pdf.setTextColor(100, 116, 139);
+  pdf.text('Client Signature', 41, finalY + 5, { align: 'center' });
+  pdf.text('For Printway Packaging', 169, finalY + 5, { align: 'center' });
+  pdf.save(`Printway_${currentSector}_${client.company_name.replace(/\s+/g, '_')}.pdf`);
+});
+</script>
+</body>
+</html>
